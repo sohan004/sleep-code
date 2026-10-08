@@ -16,10 +16,11 @@ interface Props {
 }
 
 const LINE_HEIGHT = 20;
+const GUTTER_WIDTH = 64;
 type Range = [number, number] | null;
 
 const Caret = () => (
-  <span className="relative inline-block h-4.5 w-0 align-middle">
+  <span data-caret className="relative inline-block h-4.5 w-0 align-middle">
     <span className="absolute top-0 left-0 h-full w-0.5 animate-blink bg-[var(--ui-cursor)]" />
   </span>
 );
@@ -104,6 +105,19 @@ export function CodePane({ doc, cursor, selection, squiggle, syntax, highlight =
       el.scrollTo({ top: target, behavior: Math.abs(target - el.scrollTop) > el.clientHeight ? "auto" : "smooth" });
     }
   }, [cursorLine]);
+
+  // Follow the caret horizontally on long lines, like an editor does while you type
+  useEffect(() => {
+    const el = scrollRef.current;
+    const caret = el?.querySelector<HTMLElement>("[data-caret]");
+    if (!el || !caret) return;
+    const box = el.getBoundingClientRect();
+    const x = caret.getBoundingClientRect().left;
+    const left = box.left + GUTTER_WIDTH + 8;
+    const right = box.right - 40;
+    if (x > right) el.scrollLeft += x - right + 120;
+    else if (x < left) el.scrollLeft = Math.max(0, el.scrollLeft - (left - x) - 120);
+  }, [cursor]);
 
   const squiggleRange: [number, number] | null = squiggle ? [squiggle.start, squiggle.end] : null;
 

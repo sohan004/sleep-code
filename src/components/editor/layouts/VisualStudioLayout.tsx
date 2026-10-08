@@ -1,3 +1,4 @@
+import { appName } from "@/lib/projectNames";
 import { IdeLogo } from "@/components/IdeLogo";
 import { ChatThread } from "../ChatThread";
 import { CodePane } from "../CodePane";
@@ -11,12 +12,11 @@ import type { LayoutProps } from "./types";
 const MENUS = ["File", "Edit", "View", "Git", "Project", "Build", "Debug", "Test", "Analyze", "Tools", "Extensions", "Window", "Help"];
 const BOTTOM_TABS = ["Terminal", "Output", "Error List", "Package Manager Console"];
 
-const pascal = (s: string) => s.replace(/(^|[-_ .])(\w)/g, (_, __, c: string) => c.toUpperCase());
 
 /** Visual Studio 2022: menu + toolbar, Solution Explorer and Copilot Chat on the right. */
 export function VisualStudioLayout({ config, session, snippet, ide, cursorLine, cursorCol }: LayoutProps) {
-  const solution = pascal(config.project);
-  const running = session.terminal.input === null;
+  const solution = appName(config);
+  const running = session.terminal.running === "build" || session.terminal.running === "test";
   const errors = session.squiggle ? 1 : 0;
   const stem = snippet.filename.split("/").pop()!.replace(/\.[^.]+$/, "");
 
@@ -201,7 +201,7 @@ export function VisualStudioLayout({ config, session, snippet, ide, cursorLine, 
 
       {/* Status bar */}
       <div className="flex h-6 shrink-0 items-center gap-4 px-3 text-[12px]" style={{ background: "var(--ui-statusbar)", color: "var(--ui-status-fg)" }}>
-        <span>{running ? "Build started…" : "Ready"}</span>
+        <span>{running ? (session.terminal.running === "test" ? "Test run started…" : "Build started…") : session.lastBuild?.ok === false ? "Build failed" : "Ready"}</span>
         <div className="flex-1" />
         <span>↑ 0</span>
         <span>✎ {session.modified.length}</span>

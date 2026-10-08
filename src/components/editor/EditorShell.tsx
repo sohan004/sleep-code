@@ -58,7 +58,7 @@ function StackLoader({ stackId, project, speed, ide, themeId }: LoaderProps) {
   useEffect(() => {
     let cancelled = false;
     STACK_LOADERS[stackId]().then((m) => {
-      if (!cancelled) setConfig(project ? { ...m.default, project } : m.default);
+      if (!cancelled) setConfig(project ? { ...m.default, project, customProject: true } : m.default);
     });
     return () => {
       cancelled = true;
@@ -120,7 +120,9 @@ function Editor({ config, stackId, speed, ide, style }: EditorProps) {
   return (
     <div
       onClick={enterFullscreen}
-      className={`flex h-screen w-screen flex-col overflow-hidden text-[13px] select-none ${pointerHidden ? "cursor-none" : ""}`}
+      className={`flex h-screen w-screen flex-col overflow-hidden text-[13px] select-none ${
+        pointerHidden ? "cursor-none [&_*]:cursor-none!" : ""
+      }`}
       style={{
         ...style,
         background: "var(--ui-editor)",

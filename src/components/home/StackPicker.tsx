@@ -3,7 +3,7 @@
 import { IdeLogo } from "@/components/IdeLogo";
 import { requestFullscreen, StartLink } from "@/components/StartLink";
 import { useRouter } from "next/navigation";
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type KeyboardEvent } from "react";
 import { CATALOG } from "@/lib/catalog";
 import { IDE_BY_ID, IDES, recommendedIde } from "@/lib/ides";
 import {
@@ -52,15 +52,17 @@ export function StackPicker() {
   return (
     <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4 sm:p-8">
       <Step n={1} title="What do you build?" />
-      <div role="tablist" aria-label="Category" className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div role="radiogroup" aria-label="Category" className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {CATALOG.map((c) => {
           const selected = c.id === categoryId;
           return (
             <button
               key={c.id}
               type="button"
-              role="tab"
-              aria-selected={selected}
+              role="radio"
+              aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              onKeyDown={(e) => radioKeys(e, CATALOG.map((x) => x.id), c.id, pickCategory)}
               onClick={() => pickCategory(c.id)}
               className={`rounded-2xl border p-4 text-left transition-colors ${
                 selected
@@ -88,6 +90,8 @@ export function StackPicker() {
               type="button"
               role="radio"
               aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              onKeyDown={(e) => radioKeys(e, category.languages.map((x) => x.id), l.id, pickLanguage)}
               onClick={() => pickLanguage(l.id)}
               className={`rounded-full border px-4 py-2 text-sm transition-colors ${
                 selected
@@ -111,6 +115,8 @@ export function StackPicker() {
               type="button"
               role="radio"
               aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              onKeyDown={(e) => radioKeys(e, language.frameworks.map((x) => x.id), f.id, setFrameworkId)}
               onClick={() => setFrameworkId(f.id)}
               onDoubleClick={() => {
                 requestFullscreen();
@@ -145,7 +151,9 @@ export function StackPicker() {
             id="project-name"
             type="text"
             value={project}
-            onChange={(e) => setProject(e.target.value.replace(/\s/g, "-").replace(/[^A-Za-z0-9._-]/g, ""))}
+            onChange={(e) =>
+              setProject(e.target.value.replace(/\s/g, "-").replace(/[^A-Za-z0-9._-]/g, "").replace(/^[.-]+/, ""))
+            }
             placeholder="Leave empty for a realistic default"
             maxLength={40}
             spellCheck={false}
@@ -189,6 +197,8 @@ export function StackPicker() {
               type="button"
               role="radio"
               aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              onKeyDown={(e) => radioKeys(e, IDES.map((x) => x.id), i.id, setPickedIde)}
               onClick={() => setPickedIde(i.id)}
               className={`relative flex flex-col items-center gap-1.5 rounded-xl border px-2 pt-3 pb-2 text-center text-xs transition-colors ${
                 selected ? "border-indigo-500 bg-indigo-500/10 text-white" : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-600"
@@ -250,6 +260,17 @@ export function StackPicker() {
       </div>
     </div>
   );
+}
+
+/** Arrow-key navigation for a role="radio" group with a roving tab stop (WAI-ARIA radio group pattern). */
+function radioKeys(e: KeyboardEvent<HTMLButtonElement>, ids: string[], current: string, select: (id: string) => void) {
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+  if (!step) return;
+  e.preventDefault();
+  const next = ids[(ids.indexOf(current) + step + ids.length) % ids.length];
+  select(next);
+  const group = e.currentTarget.closest("[role=radiogroup]");
+  requestAnimationFrame(() => group?.querySelector<HTMLElement>("[aria-checked=true]")?.focus());
 }
 
 function ThemePreview({ vars }: { vars: CSSProperties }) {

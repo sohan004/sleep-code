@@ -1,3 +1,4 @@
+import { appName } from "@/lib/projectNames";
 import { ChatThread } from "../ChatThread";
 import { CodePane } from "../CodePane";
 import { ProjectTree } from "../FileExplorer";
@@ -9,17 +10,20 @@ import type { LayoutProps } from "./types";
 
 const NAVIGATORS = ["folder", "git", "structure", "search", "warning", "problems", "bug", "logcat", "sparkle"] as const;
 
-const pascal = (s: string) => s.replace(/(^|[-_ .])(\w)/g, (_, __, c: string) => c.toUpperCase());
 
 /** Xcode 16-style window: toolbar, navigator, jump bar, debug console, assistant. */
 export function XcodeLayout({ config, session, snippet, ide, cursorLine, cursorCol }: LayoutProps) {
-  // Xcode schemes are named after the app target folder (e.g. "Wayfarer"), not the repo
-  const target = config.files.map((f) => f.split("/")[0]).find((d) => /^[A-Z]/.test(d) && !/Tests?$/.test(d) && !d.includes("."));
-  const scheme = target ?? pascal(config.project);
-  const running = session.terminal.input === null;
-  const failed = !!session.squiggle;
-  const time = new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: false });
-  const status = running ? `Building ${scheme}…` : failed ? "Build Failed" : "Build Succeeded";
+  const scheme = appName(config);
+  const runningKind = session.terminal.running;
+  const running = runningKind === "build" || runningKind === "test";
+  const last = session.lastBuild;
+  const failed = !running && last?.ok === false;
+  const time = last ? new Date(last.at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
+  const status = running
+    ? `${runningKind === "test" ? "Testing" : "Building"} ${scheme}…`
+    : !last
+      ? "Ready"
+      : `${last.kind === "test" ? "Test" : "Build"} ${last.ok ? "Succeeded" : "Failed"}`;
 
   return (
     <>
@@ -53,7 +57,7 @@ export function XcodeLayout({ config, session, snippet, ide, cursorLine, cursorC
             <span className="flex items-center gap-2">
               {running && <span className="h-3 w-3 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "var(--ui-muted)", borderTopColor: "transparent" }} />}
               <span style={{ color: failed ? "var(--ui-error)" : "var(--ui-fg)" }}>{status}</span>
-              <span>| Today at {time}</span>
+              {time && <span>| Today at {time}</span>}
             </span>
             <span className="flex items-center gap-2">
               {failed && <span style={{ color: "var(--ui-error)" }}>⊗ 1</span>}
@@ -145,7 +149,7 @@ export function XcodeLayout({ config, session, snippet, ide, cursorLine, cursorC
             <div className="flex h-[230px] shrink-0 flex-col border-t" style={{ borderColor: "var(--ui-border)", background: "var(--ui-panel)" }}>
               <div className="flex h-7 shrink-0 items-center gap-3 border-b px-3 text-[12px]" style={{ borderColor: "var(--ui-border)", color: "var(--ui-muted)" }}>
                 <Icon name="sidebar" size={13} />
-                <span>{running ? "Running" : "Finished running"} {scheme} on iPhone 16 Pro</span>
+                <span>{running ? (session.terminal.running === "test" ? "Testing" : "Building") : "Finished running"} {scheme} on iPhone 16 Pro</span>
                 <div className="flex-1" />
                 <span>
                   Line: {cursorLine} Col: {cursorCol}
@@ -158,7 +162,7 @@ export function XcodeLayout({ config, session, snippet, ide, cursorLine, cursorC
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <TerminalOutput
-                    lines={session.terminal.lines}
+                    lines={session.buildLog}
                     input={session.terminal.input}
                     project={config.project}
                     branch={config.branch}

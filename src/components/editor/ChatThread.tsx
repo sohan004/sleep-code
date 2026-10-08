@@ -43,7 +43,8 @@ export function useChatScript(messages: ChatMessage[]) {
           }
           elapsed = msg.delay;
         }
-        await sleep(20000, signal);
+        // Linger on the finished conversation before "starting a new chat", so the replay isn't obvious
+        await sleep(60000 + Math.random() * 60000, signal);
       }
     };
     run().catch(() => {});

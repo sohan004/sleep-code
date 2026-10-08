@@ -26,6 +26,8 @@ export interface Ctx {
   project: string;
   files: string[];
   editedFile: string;
+  /** Scheme / solution / assembly name (see lib/projectNames). */
+  appName: string;
 }
 
 // Resolved from the active theme's terminal palette
@@ -51,7 +53,8 @@ const pascal = (s: string) => s.replace(/(^|[-_ ])(\w)/g, (_, __, c: string) => 
 function codeFrame(e: CodeError, gutter = true): TermLine[] {
   const n = String(e.line);
   const pad = " ".repeat(n.length);
-  const caretPad = " ".repeat(Math.max(0, e.col - 1));
+  // Keep tabs from the source line so carets line up under tab-indented code
+  const caretPad = e.lineText.slice(0, Math.max(0, e.col - 1)).replace(/[^\t]/g, " ");
   return gutter
     ? [
         L([`${pad} |`, T.blue]),
@@ -360,7 +363,7 @@ const dotnet: Pick<Toolchain, "checkFail" | "checkPass"> = {
   checkFail: (e, c) => [
     L("  Determining projects to restore..."),
     L("  All projects are up-to-date for restore."),
-    L([`/Users/dev/code/${c.project}/${e.file}(${e.line},${e.col}): `, T.white], ["error", T.red], ` CS0103: The name '${e.wrong}' does not exist in the current context [/Users/dev/code/${c.project}/${pascal(c.project)}.csproj]`),
+    L([`/Users/dev/code/${c.project}/${e.file}(${e.line},${e.col}): `, T.white], ["error", T.red], ` CS0103: The name '${e.wrong}' does not exist in the current context [/Users/dev/code/${c.project}/${c.appName}.csproj]`),
     BLANK,
     L(["Build FAILED.", T.red]),
     BLANK,
@@ -372,7 +375,7 @@ const dotnet: Pick<Toolchain, "checkFail" | "checkPass"> = {
   checkPass: (c) => [
     L("  Determining projects to restore..."),
     L("  All projects are up-to-date for restore."),
-    L(`  ${pascal(c.project)} -> /Users/dev/code/${c.project}/bin/Debug/net9.0/${pascal(c.project)}.dll`),
+    L(`  ${c.appName} -> /Users/dev/code/${c.project}/bin/Debug/net9.0/${c.appName}.dll`),
     BLANK,
     L(["Build succeeded.", T.green]),
     L("    0 Warning(s)"),
@@ -385,8 +388,8 @@ const dotnet: Pick<Toolchain, "checkFail" | "checkPass"> = {
 function dotnetTest(c: Ctx): TermLine[] {
   const n = rnd(20, 80);
   return [
-    L(`  ${pascal(c.project)}.Tests -> /Users/dev/code/${c.project}/tests/bin/Debug/net9.0/${pascal(c.project)}.Tests.dll`),
-    L("Test run for ", [`${pascal(c.project)}.Tests.dll`, T.white], " (.NETCoreApp,Version=v9.0)"),
+    L(`  ${c.appName}.Tests -> /Users/dev/code/${c.project}/tests/bin/Debug/net9.0/${c.appName}.Tests.dll`),
+    L("Test run for ", [`${c.appName}.Tests.dll`, T.white], " (.NETCoreApp,Version=v9.0)"),
     L("A total of 1 test files matched the specified pattern."),
     BLANK,
     L(["Passed!", T.green], `  - Failed:     0, Passed:    ${n}, Skipped:     0, Total:    ${n}, Duration: ${rnd(200, 2000)} ms`),
@@ -487,14 +490,14 @@ const xcode: Pick<Toolchain, "checkFail" | "checkPass"> = {
     L(["▸ ", T.dim], "Compiling ", [base(e.file), T.white]),
     L(["❌ ", T.red], `/Users/dev/code/${c.project}/${e.file}:${e.line}:${e.col}: `, [`cannot find '${e.wrong}' in scope`, T.red]),
     L(e.lineText),
-    L(" ".repeat(Math.max(0, e.col - 1)), ["^".repeat(e.wrong.length), T.green]),
+    L(e.lineText.slice(0, Math.max(0, e.col - 1)).replace(/[^\t]/g, " "), ["^".repeat(e.wrong.length), T.green]),
     BLANK,
     L(["** BUILD FAILED **", T.red]),
   ],
   checkPass: (c) => [
     L(["▸ ", T.dim], "Compiling ", [base(c.editedFile), T.white]),
-    L(["▸ ", T.dim], "Linking ", [pascal(c.project), T.white]),
-    L(["▸ ", T.dim], "Signing ", [`${pascal(c.project)}.app`, T.white]),
+    L(["▸ ", T.dim], "Linking ", [c.appName, T.white]),
+    L(["▸ ", T.dim], "Signing ", [`${c.appName}.app`, T.white]),
     L(["▸ Build Succeeded", T.green]),
   ],
 };
@@ -502,7 +505,7 @@ const xcode: Pick<Toolchain, "checkFail" | "checkPass"> = {
 function xcodeTest(c: Ctx): TermLine[] {
   const n = rnd(18, 60);
   return [
-    L(["Test Suite ", T.dim], `${pascal(c.project)}Tests.xctest started`),
+    L(["Test Suite ", T.dim], `${c.appName}Tests.xctest started`),
     L(["    ✔ ", T.green], `test${pascal(stem(c.editedFile))}LoadsInitialState`, [` (${secs(0.01, 0.4)} seconds)`, T.dim]),
     L(["    ✔ ", T.green], "testRetryAfterNetworkFailure", [` (${secs(0.01, 0.4)} seconds)`, T.dim]),
     BLANK,
@@ -597,7 +600,7 @@ const php = (test: string, artisan = false): Toolchain => ({
 const javaPath = (f: string) => (f.startsWith("src/") ? f : `src/main/java/${f}`);
 
 function make(id: string, ctx: Ctx): Toolchain {
-  const proj = pascal(ctx.project);
+  const proj = ctx.appName;
   switch (id) {
     case "nodejs":
     case "express":
@@ -735,7 +738,7 @@ export function getToolchain(stackId: string, ctx: Ctx): Toolchain {
   return tc;
 }
 
-export function commitMessage(file: string, insertions: number): { msg: string; stat: string } {
+export function commitMessage(file: string, insertions: number, files = 1): { msg: string; stat: string } {
   const area = stem(file).replace(/[._](server|client|controller|service|handler|component)$/i, "").toLowerCase();
   const verbs = [
     `feat(${area}): handle empty and duplicate inputs`,
@@ -748,5 +751,9 @@ export function commitMessage(file: string, insertions: number): { msg: string; 
     `test(${area}): cover failure path`,
   ];
   const msg = verbs[rnd(0, verbs.length - 1)];
-  return { msg, stat: ` 1 file changed, ${insertions} insertions(+), ${rnd(0, 3)} deletions(-)` };
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const deletions = rnd(0, 3);
+  const parts = [`${plural(files, "file")} changed`, `${plural(insertions, "insertion")}(+)`];
+  if (deletions > 0) parts.push(`${plural(deletions, "deletion")}(-)`);
+  return { msg, stat: ` ${parts.join(", ")}` };
 }

@@ -19,6 +19,8 @@ export interface StackSnippet {
 export interface StackConfig {
   id: string;
   project: string;
+  /** True when `project` came from the user; it must then be shown verbatim everywhere. */
+  customProject?: boolean;
   branch: string;
   indent: string;
   files: string[];

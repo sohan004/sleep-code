@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { isKeyword } from "@/lib/highlight";
+import { appName } from "@/lib/projectNames";
 import type { StackConfig } from "@/lib/stacks/types";
 import {
   commitMessage,
@@ -32,8 +33,15 @@ export interface SessionState {
     lines: TermLine[];
     /** Text being typed after the prompt; null while a command is running. */
     input: string | null;
+    /** What the running command is, so IDEs only show "Building…" for real builds/tests. */
+    running: CommandKind | null;
   };
+  /** Build and test output only (no shell or git chatter), for IDEs without a terminal such as Xcode. */
+  buildLog: TermLine[];
+  lastBuild: { kind: "build" | "test"; ok: boolean; at: number } | null;
 }
+
+export type CommandKind = "build" | "test" | "shell";
 
 interface PendingTypo {
   start: number;
@@ -70,21 +78,24 @@ function promptSegs(cfg: StackConfig, dirty: boolean, cmd: string): TermLine {
 }
 
 /** Terminal history from "earlier in the day" so the panel already has logs when the editor opens. */
-function seedTerminal(cfg: StackConfig, stackId: string): TermLine[] {
-  const ctx: Ctx = { project: cfg.project, files: cfg.files, editedFile: cfg.snippets[0].filename };
+function seedTerminal(cfg: StackConfig, stackId: string): { lines: TermLine[]; buildLog: TermLine[] } {
+  const ctx: Ctx = { project: cfg.project, files: cfg.files, editedFile: cfg.snippets[0].filename, appName: appName(cfg) };
   const tc = getToolchain(stackId, ctx);
+  const checkOut = tc.checkPass(ctx);
+  const testOut = tc.test ? tc.testPass(ctx) : [];
   const lines: TermLine[] = [
     promptSegs(cfg, false, "git pull --rebase"),
     [["Successfully rebased and updated refs/heads/" + cfg.branch + "."]],
     promptSegs(cfg, false, tc.check),
-    ...tc.checkPass(ctx),
+    ...checkOut,
   ];
-  if (tc.test) lines.push(promptSegs(cfg, false, tc.test), ...tc.testPass(ctx));
-  return lines;
+  if (tc.test) lines.push(promptSegs(cfg, false, tc.test), ...testOut);
+  return { lines, buildLog: [...checkOut, ...testOut] };
 }
 
 export function initialSession(config: StackConfig, stackId: string): SessionState {
   const doc = config.snippets[0].code;
+  const seed = seedTerminal(config, stackId);
   return {
     active: 0,
     doc,
@@ -93,7 +104,9 @@ export function initialSession(config: StackConfig, stackId: string): SessionSta
     squiggle: null,
     dirty: false,
     modified: [],
-    terminal: { open: true, lines: seedTerminal(config, stackId), input: "" },
+    terminal: { open: true, lines: seed.lines, input: "", running: null },
+    buildLog: seed.buildLog,
+    lastBuild: { kind: "build", ok: true, at: Date.now() - rnd(4, 25) * 60_000 },
   };
 }
 
@@ -171,7 +184,7 @@ export async function runSession(
   speed = 1
 ) {
   const s: SessionState = { ...start, terminal: { ...start.terminal }, modified: [...start.modified] };
-  const publish = () => emit({ ...s, terminal: { ...s.terminal }, modified: [...s.modified] });
+  const publish = () => emit({ ...s, terminal: { ...s.terminal }, modified: [...s.modified], buildLog: s.buildLog });
   const sleep = (ms: number) =>
     new Promise<void>((resolve, reject) =>
       setTimeout(() => (ctrl.cancelled ? reject(CANCELLED) : resolve()), ms / speed)
@@ -179,7 +192,7 @@ export async function runSession(
 
   const file = () => cfg.snippets[s.active];
   const syntax = () => file().syntax;
-  const ctxFor = (editedFile: string): Ctx => ({ project: cfg.project, files: cfg.files, editedFile });
+  const ctxFor = (editedFile: string): Ctx => ({ project: cfg.project, files: cfg.files, editedFile, appName: appName(cfg) });
 
   // ---------- editing primitives ----------
 
@@ -413,7 +426,8 @@ export async function runSession(
     s.terminal.lines = [...s.terminal.lines, ...lines].slice(-MAX_TERMINAL_LINES);
   };
 
-  const runCommand = async (cmd: string, output: TermLine[], slow = false) => {
+  const runCommand = async (cmd: string, output: TermLine[], kind: CommandKind = "shell", ok = true) => {
+    const slow = kind !== "shell";
     if (!s.terminal.open) {
       s.terminal.open = true;
       publish();
@@ -428,14 +442,19 @@ export async function runSession(
     await sleep(rnd(300, 700));
     pushLines([promptSegs(cfg, s.modified.length > 0, cmd)]);
     s.terminal.input = null;
+    s.terminal.running = kind;
+    if (slow) s.buildLog = [];
     publish();
     await sleep(slow ? rnd(1500, 4000) : rnd(250, 900));
     for (const line of output) {
       pushLines([line]);
+      if (slow) s.buildLog = [...s.buildLog, line].slice(-MAX_TERMINAL_LINES);
       publish();
       await sleep(line.length === 0 ? rnd(40, 120) : rnd(slow ? 120 : 40, slow ? 600 : 220));
     }
     s.terminal.input = "";
+    s.terminal.running = null;
+    if (kind !== "shell") s.lastBuild = { kind, ok, at: Date.now() };
     publish();
   };
 
@@ -545,26 +564,26 @@ export async function runSession(
     const ctx = ctxFor(snip.filename);
     const tc = getToolchain(stackId, ctx);
     if (pending) {
-      await runCommand(tc.check, tc.checkFail(toCodeError(pending), ctx), true);
+      await runCommand(tc.check, tc.checkFail(toCodeError(pending), ctx), "build", false);
       await sleep(rnd(1800, 3500));
       await fixPending();
       await save();
       await sleep(rnd(500, 1200));
-      await runCommand(tc.check, tc.checkPass(ctx), true);
+      await runCommand(tc.check, tc.checkPass(ctx), "build");
     } else {
-      await runCommand(tc.check, tc.checkPass(ctx), true);
+      await runCommand(tc.check, tc.checkPass(ctx), "build");
     }
     if (tc.test && chance(0.75)) {
       await sleep(rnd(500, 1500));
-      await runCommand(tc.test, tc.testPass(ctx), true);
+      await runCommand(tc.test, tc.testPass(ctx), "test");
     }
 
-    if (cycle % 2 === 1 || chance(0.25)) {
+    const changed = [...s.modified];
+    if (changed.length > 0 && (cycle % 2 === 1 || chance(0.25))) {
       await sleep(rnd(800, 2000));
-      const changed = [...s.modified];
       if (chance(0.5)) await runCommand("git status -s", changed.map((f) => [[" M ", T.red], [f]] as TermLine));
       await runCommand(`git add ${changed.join(" ")}`, []);
-      const { msg, stat } = commitMessage(snip.filename, Math.max(1, insertedLines));
+      const { msg, stat } = commitMessage(snip.filename, Math.max(1, insertedLines), changed.length);
       const hash = Math.random().toString(16).slice(2, 9);
       s.modified = [];
       await runCommand(`git commit -m "${msg}"`, [[[`[${cfg.branch} ${hash}] ${msg}`]], [[stat]]]);
@@ -572,6 +591,7 @@ export async function runSession(
 
     await sleep(rnd(1500, 4000));
     if (chance(0.1)) {
+      await runCommand("clear", []);
       s.terminal.lines = [];
       publish();
     }

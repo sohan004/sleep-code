@@ -31,7 +31,7 @@ function StripeButton({ icon, active, title }: { icon: IconName; active?: boolea
 /** JetBrains "New UI": IntelliJ IDEA, Android Studio, PyCharm, WebStorm, Rider, etc. */
 export function JetBrainsLayout({ config, session, snippet, ide, cursorLine, cursorCol }: LayoutProps) {
   const android = ide.id === "android-studio";
-  const running = session.terminal.input === null;
+  const running = session.terminal.running === "build" || session.terminal.running === "test";
   const runConfig = android ? "app" : snippet.filename.split("/").pop()!.replace(/\.[^.]+$/, "");
 
   return (
