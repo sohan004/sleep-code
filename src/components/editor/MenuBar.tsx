@@ -1,3 +1,4 @@
+import { IdeLogo } from "@/components/IdeLogo";
 import type { Ide } from "@/lib/ides";
 import { WindowControls } from "./WindowControls";
 
@@ -11,16 +12,7 @@ export function MenuBar({ title, ide }: { title: string; ide: Ide }) {
       style={{ borderColor: "var(--ui-border)", background: "var(--ui-titlebar)", color: "var(--ui-fg)" }}
     >
       <div className="flex w-10 items-center justify-center">
-        {ide.id === "cursor" ? (
-          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden>
-            <path fill="currentColor" d="M12 2 3 7v10l9 5 9-5V7zm0 2.3 6.9 3.9L12 12 5.1 8.2zM5 9.9l6 3.4v6.6l-6-3.4z" />
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-            <path fill="#3b9bea" d="M17 2 8 10.5 3.5 7 2 7.8v8.4l1.5.8L8 13.5 17 22l5-2.4V4.4z" />
-            <path fill="var(--ui-titlebar)" d="M17 7.2v9.6L10.6 12z" />
-          </svg>
-        )}
+        <IdeLogo ide={ide} size={16} />
       </div>
 
       <nav className="flex items-center">

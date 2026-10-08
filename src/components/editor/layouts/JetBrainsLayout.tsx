@@ -1,3 +1,4 @@
+import { IdeLogo } from "@/components/IdeLogo";
 import { ChatThread } from "../ChatThread";
 import { CodePane } from "../CodePane";
 import { ProjectTree } from "../FileExplorer";
@@ -40,12 +41,8 @@ export function JetBrainsLayout({ config, session, snippet, ide, cursorLine, cur
         className="flex h-10 shrink-0 items-center gap-3 border-b pl-2 text-[13px]"
         style={{ background: "var(--ui-titlebar)", borderColor: "var(--ui-border)", color: "var(--ui-fg)" }}
       >
-        <span
-          className="flex h-6 w-6 items-center justify-center rounded-md text-[9px] font-black text-white"
-          style={{ background: `linear-gradient(135deg, ${ide.colors[0]}, ${ide.colors[1]})` }}
-          title={ide.label}
-        >
-          {ide.mark}
+        <span title={ide.label}>
+          <IdeLogo ide={ide} size={22} />
         </span>
         <span style={{ color: "var(--ui-muted)" }}>≡</span>
         <span className="flex items-center gap-2 rounded-md px-1.5 py-1 font-semibold">

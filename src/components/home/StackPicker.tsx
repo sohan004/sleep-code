@@ -1,5 +1,6 @@
 "use client";
 
+import { IdeLogo } from "@/components/IdeLogo";
 import { requestFullscreen, StartLink } from "@/components/StartLink";
 import { useRouter } from "next/navigation";
 import { useState, type CSSProperties } from "react";
@@ -193,13 +194,7 @@ export function StackPicker() {
                 selected ? "border-indigo-500 bg-indigo-500/10 text-white" : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-600"
               }`}
             >
-              <span
-                aria-hidden
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-[11px] font-black text-white"
-                style={{ background: `linear-gradient(135deg, ${i.colors[0]}, ${i.colors[1]})` }}
-              >
-                {i.mark}
-              </span>
+              <IdeLogo ide={i} size={32} rounded={8} />
               <span className="leading-tight">{i.label}</span>
               {i.id === recommended && (
                 <span className="absolute -top-2 rounded-full bg-emerald-600 px-1.5 text-[9px] font-semibold text-white">

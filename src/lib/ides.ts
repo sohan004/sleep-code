@@ -7,6 +7,8 @@ export interface Ide {
   defaultTheme: string;
   /** Short product mark shown in the logo tile (JetBrains-style) or menu. */
   mark: string;
+  /** Real product icon under /public/ide-logos (see SOURCES.md there). */
+  logo: string;
   /** Logo tile gradient [from, to]. */
   colors: [string, string];
   assistant: { title: string; name: string; model: string };
@@ -15,6 +17,7 @@ export interface Ide {
 export const IDES: Ide[] = [
   {
     id: "vscode",
+    logo: "/ide-logos/vscode.svg",
     label: "VS Code",
     family: "vscode",
     defaultTheme: "dark-modern",
@@ -24,6 +27,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "cursor",
+    logo: "/ide-logos/cursor.png",
     label: "Cursor",
     family: "vscode",
     defaultTheme: "cursor-dark",
@@ -33,6 +37,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "intellij",
+    logo: "/ide-logos/intellij.svg",
     label: "IntelliJ IDEA",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -42,6 +47,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "android-studio",
+    logo: "/ide-logos/android-studio.svg",
     label: "Android Studio",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -51,6 +57,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "pycharm",
+    logo: "/ide-logos/pycharm.svg",
     label: "PyCharm",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -60,6 +67,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "webstorm",
+    logo: "/ide-logos/webstorm.svg",
     label: "WebStorm",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -69,6 +77,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "phpstorm",
+    logo: "/ide-logos/phpstorm.svg",
     label: "PhpStorm",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -78,6 +87,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "goland",
+    logo: "/ide-logos/goland.svg",
     label: "GoLand",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -87,6 +97,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "rider",
+    logo: "/ide-logos/rider.svg",
     label: "Rider",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -96,6 +107,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "rubymine",
+    logo: "/ide-logos/rubymine.svg",
     label: "RubyMine",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -105,6 +117,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "clion",
+    logo: "/ide-logos/clion.svg",
     label: "CLion",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -114,6 +127,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "rustrover",
+    logo: "/ide-logos/rustrover.svg",
     label: "RustRover",
     family: "jetbrains",
     defaultTheme: "jetbrains-dark",
@@ -123,6 +137,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "xcode",
+    logo: "/ide-logos/xcode.png",
     label: "Xcode",
     family: "xcode",
     defaultTheme: "xcode-dark",
@@ -132,6 +147,7 @@ export const IDES: Ide[] = [
   },
   {
     id: "visual-studio",
+    logo: "/ide-logos/visual-studio.svg",
     label: "Visual Studio 2022",
     family: "vs",
     defaultTheme: "vs-dark",

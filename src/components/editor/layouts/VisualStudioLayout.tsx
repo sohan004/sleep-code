@@ -1,3 +1,4 @@
+import { IdeLogo } from "@/components/IdeLogo";
 import { ChatThread } from "../ChatThread";
 import { CodePane } from "../CodePane";
 import { ProjectTree } from "../FileExplorer";
@@ -23,8 +24,8 @@ export function VisualStudioLayout({ config, session, snippet, ide, cursorLine, 
     <>
       {/* Menu bar */}
       <div className="flex h-8 shrink-0 items-center gap-1 pl-2 text-[12px]" style={{ background: "var(--ui-titlebar)", color: "var(--ui-fg)" }}>
-        <span className="mr-1 flex h-5 w-5 items-center justify-center rounded text-[9px] font-black text-white" style={{ background: `linear-gradient(135deg, ${ide.colors[0]}, ${ide.colors[1]})` }}>
-          ∞
+        <span className="mr-1">
+          <IdeLogo ide={ide} size={18} />
         </span>
         {MENUS.map((m) => (
           <span key={m} className="px-1.5">

@@ -229,7 +229,14 @@ export default function HomePage() {
           <span>{SITE_NAME}</span>
         </div>
         <p>Built for developers who work hard. Sometimes.</p>
-        <p className="mt-2 text-xs text-zinc-600">Not affiliated with Microsoft or Visual Studio Code.</p>
+        <p className="mx-auto mt-2 max-w-2xl px-4 text-xs text-zinc-600">
+          Not affiliated with or endorsed by Microsoft, JetBrains, Google, Apple or Anysphere. Product names and logos
+          are trademarks of their respective owners. Android Studio icon via{" "}
+          <a href="https://commons.wikimedia.org/wiki/File:Android_Studio_icon_(2023).svg" className="underline" rel="noopener noreferrer" target="_blank">
+            Wikimedia Commons
+          </a>{" "}
+          (CC BY 2.5).
+        </p>
       </footer>
 
       <script
