@@ -11,6 +11,8 @@ interface Props {
   selection: [number, number] | null;
   squiggle: Squiggle | null;
   syntax: Syntax;
+  /** VS Code and Visual Studio outline the current line; JetBrains and Xcode fill it. */
+  highlight?: "outline" | "fill";
 }
 
 const LINE_HEIGHT = 20;
@@ -18,7 +20,7 @@ type Range = [number, number] | null;
 
 const Caret = () => (
   <span className="relative inline-block h-4.5 w-0 align-middle">
-    <span className="absolute top-0 left-0 h-full w-0.5 animate-blink bg-[#aeafad]" />
+    <span className="absolute top-0 left-0 h-full w-0.5 animate-blink bg-[var(--ui-cursor)]" />
   </span>
 );
 
@@ -55,8 +57,8 @@ const CodeLine = memo(function CodeLine({
           key={key++}
           style={{
             color,
-            backgroundColor: inRange(sel, col) ? "#264f78" : undefined,
-            textDecoration: isErr ? "underline wavy #f14c4c" : undefined,
+            backgroundColor: inRange(sel, col) ? "var(--ui-selection)" : undefined,
+            textDecoration: isErr ? "underline wavy var(--ui-error)" : undefined,
             textDecorationSkipInk: isErr ? "none" : undefined,
             textUnderlineOffset: isErr ? 4 : undefined,
           }}
@@ -79,7 +81,7 @@ function clip(range: [number, number] | null, start: number, end: number): Range
   return a < b ? [a - start, b - start] : null;
 }
 
-export function CodePane({ doc, cursor, selection, squiggle, syntax }: Props) {
+export function CodePane({ doc, cursor, selection, squiggle, syntax, highlight = "outline" }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lines = doc.split("\n");
   const starts: number[] = [];
@@ -108,7 +110,7 @@ export function CodePane({ doc, cursor, selection, squiggle, syntax }: Props) {
   return (
     <div
       ref={scrollRef}
-      className="relative min-w-0 flex-1 overflow-auto bg-[#1f1f1f] font-mono text-[14px]"
+      className="relative min-w-0 flex-1 overflow-auto bg-[var(--ui-editor)] font-mono text-[14px]"
       style={{ lineHeight: `${LINE_HEIGHT}px`, fontVariantLigatures: "none", tabSize: 4 }}
     >
       <div className="min-w-max py-1">
@@ -118,15 +120,25 @@ export function CodePane({ doc, cursor, selection, squiggle, syntax }: Props) {
           const start = starts[i] ?? 0;
           const end = start + (text?.length ?? 0);
           return (
-            <div key={i} className="flex" style={{ height: LINE_HEIGHT }}>
+            <div
+              key={i}
+              className="flex"
+              style={{ height: LINE_HEIGHT, background: isCurrent && highlight === "fill" ? "var(--ui-line-highlight)" : undefined }}
+            >
               <div
-                className={`sticky left-0 z-10 w-16 shrink-0 bg-[#1f1f1f] pr-6 text-right select-none ${
-                  isCurrent ? "text-[#cccccc]" : "text-[#6e7681]"
-                }`}
+                className="sticky left-0 z-10 w-16 shrink-0 pr-6 text-right select-none"
+                style={{
+                  background: isCurrent && highlight === "fill" ? "var(--ui-line-highlight)" : "var(--ui-editor)",
+                  color: isCurrent ? "var(--ui-gutter-active)" : "var(--ui-gutter)",
+                }}
               >
                 {i + 1}
               </div>
-              <div className={`flex-1 pr-8 whitespace-pre ${isCurrent ? "outline -outline-offset-1 outline-[#282828]" : ""}`}>
+              <div
+                className={`flex-1 pr-8 whitespace-pre ${
+                  isCurrent && highlight === "outline" ? "outline -outline-offset-1 outline-[var(--ui-line-highlight)]" : ""
+                }`}
+              >
                 {text !== undefined && (
                   <CodeLine
                     text={text}

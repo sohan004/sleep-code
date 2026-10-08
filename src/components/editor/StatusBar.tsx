@@ -7,13 +7,20 @@ interface Props {
   dirtyRepo: boolean;
   errors: number;
   warnings: number;
+  assistant: string;
 }
 
-export function StatusBar({ language, indent, line, col, branch, dirtyRepo, errors, warnings }: Props) {
+/** VS Code / Cursor status bar. */
+export function StatusBar({ language, indent, line, col, branch, dirtyRepo, errors, warnings, assistant }: Props) {
   return (
-    <div className="flex h-[22px] shrink-0 items-center gap-4 overflow-hidden bg-[#0078d4] pr-2 text-[12px] text-white select-none">
+    <div
+      className="flex h-[22px] shrink-0 items-center gap-4 overflow-hidden border-t pr-2 text-[12px] select-none"
+      style={{ background: "var(--ui-statusbar)", color: "var(--ui-status-fg)", borderColor: "var(--ui-border)" }}
+    >
       <div className="flex h-full items-center gap-3">
-        <span className="flex h-full items-center bg-[#16825d] px-2.5">⋊</span>
+        <span className="flex h-full items-center px-2.5 text-white" style={{ background: "var(--ui-accent)" }}>
+          ⋊
+        </span>
         <span>
           ⎇ {branch}
           {dirtyRepo ? "*" : ""}
@@ -33,7 +40,7 @@ export function StatusBar({ language, indent, line, col, branch, dirtyRepo, erro
         <span>UTF-8</span>
         <span>LF</span>
         <span>{"{ }"} {language}</span>
-        <span>✦ Copilot</span>
+        <span>✦ {assistant}</span>
         <span>🔔</span>
       </div>
     </div>

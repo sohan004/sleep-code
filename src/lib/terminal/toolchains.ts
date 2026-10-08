@@ -28,15 +28,16 @@ export interface Ctx {
   editedFile: string;
 }
 
+// Resolved from the active theme's terminal palette
 export const T = {
-  red: "#f14c4c",
-  green: "#23d18b",
-  yellow: "#e5e510",
-  blue: "#3b8eea",
-  cyan: "#29b8db",
-  magenta: "#d670d6",
-  dim: "#8b8b8b",
-  white: "#e5e5e5",
+  red: "var(--term-red)",
+  green: "var(--term-green)",
+  yellow: "var(--term-yellow)",
+  blue: "var(--term-blue)",
+  cyan: "var(--term-cyan)",
+  magenta: "var(--term-magenta)",
+  dim: "var(--term-dim)",
+  white: "var(--term-white)",
 };
 
 const L = (...segs: (Seg | string)[]): TermLine => segs.map((s) => (typeof s === "string" ? [s] : s));
@@ -138,15 +139,26 @@ const eslint: Pick<Toolchain, "checkFail" | "checkPass"> = {
   checkPass: silentPass,
 };
 
+const isJs = (f: string) => /\.(js|jsx|mjs|cjs)$/.test(f);
+
+/** Prefer a test file that actually exists in the project tree. */
+function testFiles(c: Ctx, fallbackExt: string): [string, string] {
+  const real = c.files.filter((f) => /(\.|_)(test|spec)\.|(^|\/)tests?\/test_/.test(f));
+  const ext = isJs(c.editedFile) ? "js" : fallbackExt;
+  const own = `src/${stem(c.editedFile)}.test.${ext}`;
+  return [real[0] ?? own, real[1] ?? `src/lib/utils.test.${ext}`];
+}
+
 function vitest(c: Ctx): TermLine[] {
   const files = rnd(3, 7);
   const tests = rnd(18, 64);
+  const [t1, t2] = testFiles(c, "ts");
   return [
     BLANK,
     L([" RUN ", T.cyan], ` v3.${rnd(0, 2)}.${rnd(0, 9)} `, [`/Users/dev/code/${c.project}`, T.dim]),
     BLANK,
-    L([" ✓ ", T.green], `src/${stem(c.editedFile)}.test.ts `, [`(${rnd(4, 12)} tests) ${rnd(12, 90)}ms`, T.dim]),
-    L([" ✓ ", T.green], `src/lib/utils.test.ts `, [`(${rnd(3, 9)} tests) ${rnd(4, 30)}ms`, T.dim]),
+    L([" ✓ ", T.green], `${t1} `, [`(${rnd(4, 12)} tests) ${rnd(12, 90)}ms`, T.dim]),
+    L([" ✓ ", T.green], `${t2} `, [`(${rnd(3, 9)} tests) ${rnd(4, 30)}ms`, T.dim]),
     BLANK,
     L([" Test Files ", T.dim], [` ${files} passed`, T.green], [` (${files})`, T.dim]),
     L(["      Tests ", T.dim], [` ${tests} passed`, T.green], [` (${tests})`, T.dim]),
@@ -159,9 +171,10 @@ function vitest(c: Ctx): TermLine[] {
 function jest(c: Ctx): TermLine[] {
   const suites = rnd(3, 9);
   const tests = rnd(20, 80);
+  const [t1, t2] = testFiles(c, "ts");
   return [
-    L([" PASS ", T.green], ` src/${stem(c.editedFile)}.spec.ts`, [` (${secs(1, 4)} s)`, T.dim]),
-    L([" PASS ", T.green], " src/app.controller.spec.ts"),
+    L([" PASS ", T.green], ` ${t1}`, [` (${secs(1, 4)} s)`, T.dim]),
+    L([" PASS ", T.green], ` ${t2}`),
     BLANK,
     L(["Test Suites: ", T.white], [`${suites} passed`, T.green], `, ${suites} total`),
     L(["Tests:       ", T.white], [`${tests} passed`, T.green], `, ${tests} total`),
@@ -188,7 +201,7 @@ function pytest(c: Ctx): TermLine[] {
     L(`rootdir: /Users/dev/code/${c.project}`),
     L(`collected ${n} items`),
     BLANK,
-    L(`tests/test_${stem(c.editedFile)}.py `, [".".repeat(rnd(8, 16)), T.green], [" [ 38%]", T.green]),
+    L(`${c.files.find((f) => /test_.*\.py$|_test\.py$/.test(f)) ?? `tests/test_${stem(c.editedFile)}.py`} `, [".".repeat(rnd(8, 16)), T.green], [" [ 38%]", T.green]),
     L("tests/test_api.py ", [".".repeat(rnd(12, 24)), T.green], [" [100%]", T.green]),
     BLANK,
     L([`============================== ${n} passed in ${secs(1, 6)}s ==============================`, T.green]),
@@ -625,7 +638,24 @@ function make(id: string, ctx: Ctx): Toolchain {
         testPass: () => [],
       };
     case "django":
-      return py("python manage.py test --parallel");
+      return {
+        ...py("python manage.py test --parallel"),
+        testPass: () => {
+          const n = rnd(40, 160);
+          return [
+            L(`Found ${n} test(s).`),
+            L("Creating test database for alias 'default'..."),
+            L(`Cloning test database for alias 'default'...`),
+            L("System check identified no issues (0 silenced)."),
+            L([".".repeat(Math.min(n, 70)), T.green]),
+            L("----------------------------------------------------------------------"),
+            L(`Ran ${n} tests in ${secs(2, 9)}s`),
+            BLANK,
+            L(["OK", T.green]),
+            L("Destroying test database for alias 'default'..."),
+          ];
+        },
+      };
     case "flask":
     case "fastapi":
     case "pyramid":
@@ -699,7 +729,10 @@ function make(id: string, ctx: Ctx): Toolchain {
 }
 
 export function getToolchain(stackId: string, ctx: Ctx): Toolchain {
-  return make(stackId, ctx);
+  const tc = make(stackId, ctx);
+  // Plain JavaScript projects lint rather than type-check
+  if (isJs(ctx.editedFile) && tc.check.startsWith("npx tsc")) return { ...tc, check: "npx eslint ." };
+  return tc;
 }
 
 export function commitMessage(file: string, insertions: number): { msg: string; stat: string } {

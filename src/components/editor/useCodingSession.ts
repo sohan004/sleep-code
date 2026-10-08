@@ -145,19 +145,19 @@ function lineInfo(doc: string, offset: number) {
   return { line, col: offset - lineStart + 1, lineText: doc.slice(lineStart, lineEnd === -1 ? undefined : lineEnd) };
 }
 
-export function useCodingSession(config: StackConfig, stackId: string): SessionState {
+export function useCodingSession(config: StackConfig, stackId: string, speed = 1): SessionState {
   const [state, setState] = useState(() => initialSession(config, stackId));
   const startRef = useRef(state);
 
   useEffect(() => {
     const ctrl = { cancelled: false };
-    runSession(config, stackId, setState, ctrl, startRef.current).catch((err) => {
+    runSession(config, stackId, setState, ctrl, startRef.current, speed).catch((err) => {
       if (err !== CANCELLED) throw err;
     });
     return () => {
       ctrl.cancelled = true;
     };
-  }, [config, stackId]);
+  }, [config, stackId, speed]);
 
   return state;
 }
@@ -167,13 +167,14 @@ export async function runSession(
   stackId: string,
   emit: (s: SessionState) => void,
   ctrl: { cancelled: boolean },
-  start: SessionState = initialSession(cfg, stackId)
+  start: SessionState = initialSession(cfg, stackId),
+  speed = 1
 ) {
   const s: SessionState = { ...start, terminal: { ...start.terminal }, modified: [...start.modified] };
   const publish = () => emit({ ...s, terminal: { ...s.terminal }, modified: [...s.modified] });
   const sleep = (ms: number) =>
     new Promise<void>((resolve, reject) =>
-      setTimeout(() => (ctrl.cancelled ? reject(CANCELLED) : resolve()), ms)
+      setTimeout(() => (ctrl.cancelled ? reject(CANCELLED) : resolve()), ms / speed)
     );
 
   const file = () => cfg.snippets[s.active];

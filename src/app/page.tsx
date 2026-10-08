@@ -26,7 +26,11 @@ const features = [
   { icon: "⌨️", title: "Human-speed typing", desc: "Character-by-character with natural pauses, auto-indent and think-time between lines." },
   { icon: "🤖", title: "Live AI chat panel", desc: "A Copilot-style conversation about the exact code on screen: reviews, edge cases, design questions." },
   { icon: "🗂️", title: "Real project trees", desc: "Each stack has its own folder structure, two working files and a plausible git branch." },
-  { icon: "🎨", title: "Faithful VS Code UI", desc: "Title bar, explorer, tabs, breadcrumbs, minimap and status bar in the Dark Modern theme." },
+  {
+    icon: "🎨",
+    title: "Your IDE, your theme",
+    desc: "VS Code, Cursor, IntelliJ, Android Studio, PyCharm, Rider, Xcode, Visual Studio and more, with 18 colour themes.",
+  },
   { icon: "🔒", title: "Runs in your browser", desc: "No accounts, no API calls, nothing to install. Close the tab and it's gone." },
   { icon: "🧩", title: `${STACK_COUNT} stacks`, desc: "From Laravel and Spring Boot to Flutter, Unity, Godot and Roblox." },
 ];
@@ -39,6 +43,10 @@ const faqs = [
   {
     q: "Which languages and frameworks are supported?",
     a: `${STACK_COUNT} stacks across backend (Node.js, Django, Laravel, Spring Boot, ASP.NET Core, Gin, Rails and more), web (React, Vue, Angular, Svelte, Next.js, Nuxt), mobile apps (React Native, Flutter, SwiftUI, Jetpack Compose, .NET MAUI) and games (Unity, Unreal, Godot, Phaser, Pygame, LÖVE, Roblox).`,
+  },
+  {
+    q: "Which editors and themes can it imitate?",
+    a: "VS Code and Cursor; the JetBrains family (IntelliJ IDEA, Android Studio, PyCharm, WebStorm, PhpStorm, GoLand, Rider, RubyMine, CLion, RustRover); Xcode; and Visual Studio 2022. Themes include Dark Modern, Dark+, Light Modern, Monokai, Dracula, One Dark Pro, GitHub Dark, Nord, Catppuccin, Tokyo Night, Solarized, Darcula, IntelliJ Light and the Xcode defaults.",
   },
   {
     q: "How long does the session run?",

@@ -1,12 +1,5 @@
 import { FileIcon } from "./FileIcon";
 
-interface Props {
-  project: string;
-  files: string[];
-  activeFile: string;
-  modified: string[];
-}
-
 interface Node {
   name: string;
   path: string;
@@ -39,21 +32,80 @@ function buildTree(paths: string[]): Node[] {
   return root.children;
 }
 
-function TreeNode({ node, depth, activeFile, modified }: { node: Node; depth: number; activeFile: string; modified: string[] }) {
+/**
+ * Collapses chains of single-child folders into one row, like VS Code's compact folders
+ * and JetBrains' compacted packages (`com.example.app` under java/kotlin source roots).
+ */
+function compact(nodes: Node[], variant: TreeVariant, parentName = ""): Node[] {
+  const sourceRoot = (name: string) => variant === "jetbrains" && /^(java|kotlin|scala)$/.test(name);
+  return nodes.map((n) => {
+    if (!n.isDir) return n;
+    let cur = n;
+    let name = n.name;
+    const sep = () => (sourceRoot(parentName) ? "." : "/");
+    // JetBrains keeps source roots (java/, kotlin/) as their own row and compacts the packages beneath
+    while (cur.children.length === 1 && cur.children[0].isDir && !sourceRoot(cur.name) && !sourceRoot(cur.children[0].name)) {
+      cur = cur.children[0];
+      name += sep() + cur.name;
+    }
+    return { ...cur, name, children: compact(cur.children, variant, cur.name) };
+  });
+}
+
+export type TreeVariant = "vscode" | "jetbrains" | "xcode";
+
+interface TreeProps {
+  files: string[];
+  activeFile: string;
+  modified: string[];
+  variant?: TreeVariant;
+  rowHeight?: number;
+}
+
+function Row({
+  node,
+  depth,
+  activeFile,
+  modified,
+  variant,
+  rowHeight,
+}: { node: Node; depth: number } & Required<Omit<TreeProps, "files">>) {
+  const indent = variant === "jetbrains" ? 14 : variant === "xcode" ? 14 : 12;
   if (node.isDir) {
     const dirModified = modified.some((m) => m.startsWith(node.path + "/"));
     return (
       <>
         <div
-          className={`flex h-[22px] items-center gap-1 pr-3 hover:bg-[#2a2d2e] ${dirModified ? "text-[#e2c08d]" : "text-[#cccccc]"}`}
-          style={{ paddingLeft: 8 + depth * 12 }}
+          className="flex items-center gap-1 pr-3"
+          style={{
+            height: rowHeight,
+            paddingLeft: 8 + depth * indent,
+            color: dirModified && variant !== "xcode" ? "var(--ui-modified)" : "var(--ui-fg)",
+          }}
         >
-          <span className="w-4 text-center text-[10px] text-[#c5c5c5]">⌄</span>
+          <span className="w-4 text-center text-[10px]" style={{ color: "var(--ui-muted)" }}>
+            {variant === "vscode" ? "⌄" : "▾"}
+          </span>
+          {variant !== "vscode" && (
+            <span className="text-[12px]" style={{ color: variant === "xcode" ? "#3e8bf5" : "#9aa7b0" }}>
+              {variant === "xcode" ? "▣" : "▰"}
+            </span>
+          )}
           <span className="flex-1 truncate">{node.name}</span>
-          {dirModified && <span className="h-1.5 w-1.5 rounded-full bg-[#e2c08d]/80" />}
+          {dirModified && variant === "vscode" && (
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--ui-modified)" }} />
+          )}
         </div>
         {node.children.map((c) => (
-          <TreeNode key={c.path} node={c} depth={depth + 1} activeFile={activeFile} modified={modified} />
+          <Row
+            key={c.path}
+            node={c}
+            depth={depth + 1}
+            activeFile={activeFile}
+            modified={modified}
+            variant={variant}
+            rowHeight={rowHeight}
+          />
         ))}
       </>
     );
@@ -62,10 +114,15 @@ function TreeNode({ node, depth, activeFile, modified }: { node: Node; depth: nu
   const isModified = modified.includes(node.path);
   return (
     <div
-      className={`flex h-[22px] items-center gap-1 pr-3 ${
-        active ? "bg-[#37373d] outline -outline-offset-1 outline-[#0078d4]" : "hover:bg-[#2a2d2e]"
-      } ${isModified ? "text-[#e2c08d]" : active ? "text-white" : "text-[#cccccc]"}`}
-      style={{ paddingLeft: 8 + depth * 12 + 12 }}
+      className={`flex items-center gap-1 pr-3 ${variant === "xcode" && active ? "rounded-md" : ""}`}
+      style={{
+        height: rowHeight,
+        paddingLeft: 8 + depth * indent + (variant === "vscode" ? 12 : 16),
+        background: active ? "var(--ui-list-active)" : undefined,
+        outline: active && variant === "vscode" ? "1px solid var(--ui-accent)" : undefined,
+        outlineOffset: -1,
+        color: isModified ? "var(--ui-modified)" : "var(--ui-fg)",
+      }}
     >
       <FileIcon name={node.name} />
       <span className="flex-1 truncate">{node.name}</span>
@@ -74,21 +131,47 @@ function TreeNode({ node, depth, activeFile, modified }: { node: Node; depth: nu
   );
 }
 
-export function FileExplorer({ project, files, activeFile, modified }: Props) {
-  const tree = buildTree(files);
+export function ProjectTree({ files, activeFile, modified, variant = "vscode", rowHeight = 22 }: TreeProps) {
   return (
-    <div className="flex w-60 shrink-0 cursor-default flex-col overflow-y-auto border-r border-[#2b2b2b] bg-[#181818] text-[13px]">
-      <div className="flex h-9 shrink-0 items-center justify-between px-5 text-[11px] tracking-wide text-[#bbbbbb] uppercase">
+    <>
+      {compact(buildTree(files), variant).map((n) => (
+        <Row
+          key={n.path}
+          node={n}
+          depth={0}
+          activeFile={activeFile}
+          modified={modified}
+          variant={variant}
+          rowHeight={rowHeight}
+        />
+      ))}
+    </>
+  );
+}
+
+interface Props {
+  project: string;
+  files: string[];
+  activeFile: string;
+  modified: string[];
+}
+
+/** VS Code explorer side bar. */
+export function FileExplorer({ project, files, activeFile, modified }: Props) {
+  return (
+    <div
+      className="flex w-60 shrink-0 cursor-default flex-col overflow-y-auto border-r text-[13px]"
+      style={{ borderColor: "var(--ui-border)", background: "var(--ui-sidebar)" }}
+    >
+      <div className="flex h-9 shrink-0 items-center justify-between px-5 text-[11px] tracking-wide uppercase" style={{ color: "var(--ui-muted)" }}>
         <span>Explorer</span>
         <span className="text-[14px]">⋯</span>
       </div>
-      <div className="flex h-[22px] shrink-0 items-center gap-1 px-1 text-[11px] font-bold text-[#cccccc] uppercase">
+      <div className="flex h-[22px] shrink-0 items-center gap-1 px-1 text-[11px] font-bold uppercase" style={{ color: "var(--ui-fg)" }}>
         <span className="w-4 text-center text-[10px]">⌄</span>
         {project}
       </div>
-      {tree.map((n) => (
-        <TreeNode key={n.path} node={n} depth={0} activeFile={activeFile} modified={modified} />
-      ))}
+      <ProjectTree files={files} activeFile={activeFile} modified={modified} />
     </div>
   );
 }

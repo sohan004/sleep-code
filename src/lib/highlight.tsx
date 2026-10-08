@@ -1,20 +1,21 @@
 import type { ReactNode } from "react";
 import type { Syntax } from "./stacks/types";
 
+// Colours resolve from the active theme's CSS variables (see lib/themes.ts)
 const C = {
-  comment: "#6a9955",
-  string: "#ce9178",
-  keyword: "#569cd6",
-  control: "#c586c0",
-  type: "#4ec9b0",
-  func: "#dcdcaa",
-  number: "#b5cea8",
-  variable: "#9cdcfe",
-  tag: "#569cd6",
-  attr: "#9cdcfe",
-  plain: "#d4d4d4",
-  bracket: "#ffd700",
-  meta: "#c586c0",
+  comment: "var(--syn-comment)",
+  string: "var(--syn-string)",
+  keyword: "var(--syn-keyword)",
+  control: "var(--syn-control)",
+  type: "var(--syn-type)",
+  func: "var(--syn-func)",
+  number: "var(--syn-number)",
+  variable: "var(--syn-variable)",
+  tag: "var(--syn-tag)",
+  attr: "var(--syn-attr)",
+  plain: "var(--syn-plain)",
+  bracket: "var(--syn-bracket)",
+  meta: "var(--syn-meta)",
 };
 
 const KEYWORDS = new Set(
@@ -105,12 +106,12 @@ function tokenizeMarkup(line: string): Token[] {
     };
     if ((m = rest.match(LINE_COMMENT.markup))) take(m[0], C.comment);
     else if ((m = rest.match(/^<!?\/?[A-Za-z][\w:.-]*/))) {
-      out.push(["<", "#808080"]);
+      out.push(["<", "var(--ui-gutter)"]);
       rest = rest.slice(1);
       take(m[0].slice(1), m[0].includes(":") || /^<\/?[A-Z]/.test(m[0]) ? C.type : C.tag);
       inTag = true;
     } else if (inTag && (m = rest.match(/^\/?>/))) {
-      take(m[0], "#808080");
+      take(m[0], "var(--ui-gutter)");
       inTag = false;
     } else if (inTag && (m = rest.match(/^[\w:@.#*()[\]-]+(?==)/))) take(m[0], C.attr);
     else if (inTag && (m = rest.match(/^("[^"]*"?|'[^']*'?)/))) take(m[0], C.string);
