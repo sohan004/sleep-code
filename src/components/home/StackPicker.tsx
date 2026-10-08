@@ -154,13 +154,15 @@ export function StackPicker() {
             onChange={(e) =>
               setProject(e.target.value.replace(/\s/g, "-").replace(/[^A-Za-z0-9._-]/g, "").replace(/^[.-]+/, ""))
             }
-            placeholder="Leave empty for a realistic default"
+            placeholder="e.g. billing-api (optional)"
             maxLength={40}
             spellCheck={false}
             autoComplete="off"
-            className="w-full bg-transparent font-mono text-sm text-white placeholder:font-sans placeholder:text-zinc-600 focus:outline-none"
+            className="w-full rounded-md border border-zinc-600 bg-zinc-950 px-3 py-2 font-mono text-sm text-white placeholder:font-sans placeholder:text-zinc-500 hover:border-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/40 focus:outline-none"
           />
-          <p className="mt-1.5 text-[11px] text-zinc-500">Shown in the explorer, title bar and terminal prompt.</p>
+          <p className="mt-1.5 text-[11px] text-zinc-500">
+            Shown in the explorer, title bar and terminal. Leave empty for a realistic default.
+          </p>
         </div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
           <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-zinc-400">
